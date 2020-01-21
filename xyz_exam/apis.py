@@ -2,15 +2,13 @@
 from __future__ import division
 from xyz_util.statutils import do_rest_stat_action
 from xyz_restful.mixins import UserApiMixin
-from .apps import Config
 from rest_framework.response import Response
-
-__author__ = 'denishuang'
 from . import models, serializers, stats
 from rest_framework import viewsets, decorators
-from xyz_restful.helper import register
+from xyz_restful.decorators import register
 
 
+@register()
 class PaperViewSet(UserApiMixin, viewsets.ModelViewSet):
     queryset = models.Paper.objects.all()
     serializer_class = serializers.PaperSerializer
@@ -36,10 +34,7 @@ class PaperViewSet(UserApiMixin, viewsets.ModelViewSet):
             .update(is_active=request.data.get('is_active', True))
         return Response({'rows': rows})
 
-
-register(Config.label, 'paper', PaperViewSet)
-
-
+@register()
 class AnswerViewSet(UserApiMixin, viewsets.ModelViewSet):
     queryset = models.Answer.objects.all()
     serializer_class = serializers.AnswerSerializer
@@ -55,18 +50,14 @@ class AnswerViewSet(UserApiMixin, viewsets.ModelViewSet):
         return do_rest_stat_action(self, stats.stats_answer)
 
 
-register(Config.label, 'answer', AnswerViewSet)
-
-
+@register()
 class StatViewSet(UserApiMixin, viewsets.ReadOnlyModelViewSet):
     queryset = models.Stat.objects.all()
     serializer_class = serializers.StatSerializer
     filter_fields = ('paper',)
 
 
-register(Config.label, 'stat', StatViewSet)
-
-
+@register()
 class PerformanceViewSet(UserApiMixin, viewsets.ReadOnlyModelViewSet):
     queryset = models.Performance.objects.all()
     serializer_class = serializers.PerformanceSerializer
@@ -75,9 +66,7 @@ class PerformanceViewSet(UserApiMixin, viewsets.ReadOnlyModelViewSet):
     ordering_fields = ('score', 'update_time')
 
 
-register(Config.label, 'performance', PerformanceViewSet)
-
-
+@register()
 class FaultViewSet(UserApiMixin, viewsets.ModelViewSet):
     queryset = models.Fault.objects.all()
     serializer_class = serializers.FaultSerializer
@@ -93,5 +82,3 @@ class FaultViewSet(UserApiMixin, viewsets.ModelViewSet):
     def stat(self, request):
         return do_rest_stat_action(self, stats.stats_fault)
 
-
-register(Config.label, 'fault', FaultViewSet)

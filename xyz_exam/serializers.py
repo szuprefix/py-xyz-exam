@@ -12,6 +12,7 @@ class PaperSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer)
         model = models.Paper
         fields = '__all__'
 
+
 class PaperListSerializer(PaperSerializer):
     class Meta(PaperSerializer.Meta):
         exclude = ('content_object', 'content')
@@ -27,7 +28,7 @@ class AnswerSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer
 
 class AnswerListSerializer(AnswerSerializer):
     class Meta(AnswerSerializer.Meta):
-        exclude = ('detail', )
+        exclude = ('detail',)
 
 
 class StatSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
@@ -41,11 +42,9 @@ class PerformanceSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSeria
 
     class Meta:
         model = models.Performance
-        fields = '__all__'
-        extra_kwargs = {'paper': {'read_only': True}, 'party': {'read_only': True}, 'user': {'read_only': True}}
+        read_only_fields = ['paper', 'user']
 
 
 class FaultSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = models.Fault
-        fields = '__all__'

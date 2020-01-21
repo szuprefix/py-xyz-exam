@@ -2,7 +2,7 @@
 # author = 'denishuang'
 from __future__ import unicode_literals
 from . import models
-from django_szuprefix.utils import statutils
+from xyz_util import statutils
 
 
 def detail_group_stat(qset, measure):
