@@ -47,6 +47,7 @@ class AnswerViewSet(UserApiMixin, viewsets.ModelViewSet):
 
     @decorators.list_route(['get'])
     def stat(self, request):
+        print request.tenant.name
         return do_rest_stat_action(self, stats.stats_answer)
 
 
