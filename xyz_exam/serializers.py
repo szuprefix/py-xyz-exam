@@ -11,6 +11,7 @@ class PaperSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer)
     class Meta:
         model = models.Paper
         fields = '__all__'
+        read_only_fields = ('user', 'questions_count')
 
 
 class PaperListSerializer(PaperSerializer):
