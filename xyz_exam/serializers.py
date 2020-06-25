@@ -10,7 +10,7 @@ from . import models
 class PaperSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = models.Paper
-        fields = '__all__'
+        exclude = ()
         read_only_fields = ('user', 'questions_count')
 
 
@@ -51,3 +51,9 @@ class FaultSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer)
     class Meta:
         model = models.Fault
         fields = '__all__'
+
+
+class ExamSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = models.Exam
+        exclude = ()

@@ -6,14 +6,16 @@ from django.db import models
 from django.utils.functional import cached_property
 from django.contrib.auth.models import User
 from xyz_util import modelutils
+from . import choices
 
 EXAM_MIN_PASS_SCORE = 70
+
 
 
 class Paper(models.Model):
     class Meta:
         verbose_name_plural = verbose_name = "试卷"
-        ordering = ('-is_active', 'title', '-create_time',)
+        ordering = ('-is_active', 'order_number', '-create_time',)
 
     user = models.ForeignKey(User, verbose_name=User._meta.verbose_name, related_name="exam_papers",
                              on_delete=models.PROTECT)
@@ -24,9 +26,12 @@ class Paper(models.Model):
     create_time = models.DateTimeField("创建时间", auto_now_add=True)
     is_active = models.BooleanField("有效", blank=False, default=False)
     questions_count = models.PositiveSmallIntegerField("题数", blank=True, default=0)
+    is_break_through = models.BooleanField("闯关", blank=True, default=True)
+    tags = models.CharField('标签', max_length=256, blank=True, default='')
+    order_number = models.PositiveIntegerField('序号', default=0, blank=True, help_text='按数字从小到大排序')
     owner_type = models.ForeignKey('contenttypes.ContentType', verbose_name='归类', null=True, blank=True,
-                                   on_delete=models.CASCADE)
-    owner_id = models.PositiveIntegerField(verbose_name='属主编号', null=True, blank=True)
+                                   on_delete=models.PROTECT)
+    owner_id = models.PositiveIntegerField(verbose_name='属主编号', null=True, blank=True, db_index=True)
     owner = GenericForeignKey('owner_type', 'owner_id')
 
     def __unicode__(self):
@@ -74,9 +79,6 @@ class Answer(models.Model):
     class Meta:
         verbose_name_plural = verbose_name = "用户答卷"
         ordering = ('-create_time',)
-        permissions = (
-            ("view_all_answer", "查看所有用户答卷"),
-        )
 
     user = models.ForeignKey(User, verbose_name=User._meta.verbose_name, related_name="exam_answers",
                              on_delete=models.PROTECT)
@@ -124,7 +126,6 @@ class Performance(models.Model):
     class Meta:
         verbose_name_plural = verbose_name = "用户成绩"
         unique_together = ('user', 'paper')
-        # ordering = ('-create_time',)
 
     user = models.ForeignKey(User, verbose_name=User._meta.verbose_name, related_name="exam_performances",
                              on_delete=models.PROTECT)
@@ -160,7 +161,7 @@ class Performance(models.Model):
     def save(self, **kwargs):
         p = self.cal_performance()
         self.detail = p
-        self.score = p.get('lastScore', 0)
+        self.score = p.get('maxScore', 0)
         return super(Performance, self).save(**kwargs)
 
 
@@ -169,17 +170,53 @@ class Fault(models.Model):
         verbose_name_plural = verbose_name = "错题"
         unique_together = ('user', 'paper', 'question_id')
 
-    user = models.ForeignKey(User, verbose_name=User._meta.verbose_name, related_name="exam_errors",
+    user = models.ForeignKey(User, verbose_name=User._meta.verbose_name, related_name="exam_faults",
                              on_delete=models.PROTECT)
-    paper = models.ForeignKey(Paper, verbose_name=Paper._meta.verbose_name, related_name="errors",
+    paper = models.ForeignKey(Paper, verbose_name=Paper._meta.verbose_name, related_name="faults",
                               on_delete=models.PROTECT)
     question_id = models.CharField("题号", max_length=16)
+    question_type = models.PositiveSmallIntegerField("类别", choices=choices.CHOICES_QUESTION_TYPE, default=choices.QUESTION_TYPE_TEXTAREA, db_index=True)
     question = modelutils.JSONField("题目")
-    times = models.PositiveSmallIntegerField("次数")
+    times = models.PositiveSmallIntegerField("次数", default=1)
     detail = modelutils.JSONField("详情")
-    corrected = models.BooleanField("订正", default=False)
-    create_time = models.DateTimeField("创建时间", auto_now_add=True)
+    correct_straight_times = models.PositiveSmallIntegerField("连续答对次数", default=0)
+    corrected = models.BooleanField("已订正", default=False)
+    is_active = models.BooleanField("有效", blank=False, default=True)
+    create_time = models.DateTimeField("创建时间", auto_now_add=True, db_index=True)
     update_time = models.DateTimeField("更新时间", auto_now=True)
 
     def __unicode__(self):
         return "%s@%s by %s" % (self.question_id, self.paper, self.user)
+
+    def save(self, **kwargs):
+        from . import helper
+        self.correct_straight_times = helper.cal_correct_straight_times(self.detail.get('result_list', []))
+        return super(Fault, self).save(**kwargs)
+
+
+
+class Exam(models.Model):
+    class Meta:
+        verbose_name_plural = verbose_name = "考试"
+
+    name = models.CharField('名称', max_length=256)
+    begin_time = models.DateTimeField('开始时间', db_index=True)
+    end_time = models.DateTimeField('结束时间', db_index=True, null=True, blank=True)
+    minutes = models.PositiveSmallIntegerField('限时(分钟)', default=60)
+    is_active = models.BooleanField("有效", blank=False, default=False)
+    create_time = models.DateTimeField("创建时间", auto_now_add=True)
+    update_time = models.DateTimeField("更新时间", auto_now=True)
+    owner_type = models.ForeignKey('contenttypes.ContentType', verbose_name='归类', null=True, blank=True,
+                                   on_delete=models.PROTECT)
+    owner_id = models.PositiveIntegerField(verbose_name='属主编号', null=True, blank=True, db_index=True)
+    owner = GenericForeignKey('owner_type', 'owner_id')
+
+
+    def __unicode__(self):
+        return self.name
+
+    def save(self, **kwargs):
+        if self.end_time is None:
+            from datetime import timedelta
+            self.end_time = self.begin_time + timedelta(minutes=self.minutes)
+        return super(Exam, self).save(**kwargs)

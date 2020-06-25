@@ -3,7 +3,7 @@ from __future__ import division, unicode_literals
 
 __author__ = 'denishuang'
 import re
-from django_szuprefix.utils.datautils import strQ2B
+from xyz_util.datautils import strQ2B
 from . import models
 
 
@@ -21,6 +21,12 @@ def distrib_count(d, a):
         percents[str(k)] = s / float(tc)
     d['count'] = tc
     return d
+
+
+def answer_is_empty(a):
+    if isinstance(a, (list, tuple)):
+        return not any(a)
+    return not a
 
 
 def answer_equal(standard_answer, user_answer):
@@ -83,43 +89,93 @@ def answer_match(standard_answer, user_answer, one_by_one=False):
 
 
 def extract_fault(answer):
-    m = dict([(a['id'], a) for a in answer.detail if not a['right']])
+    m = dict([(a['number'], a) for a in answer.detail if not (answer_is_empty(a['userAnswer']) or a['right'])])
     p = answer.paper.content_object
     rs = []
     for g in p['groups']:
         for q in g['questions']:
-            qid = q['id']
+            qnum = q['number']
             q['group'] = dict(title=g.get('title'), memo=g.get('memo'), number=g.get('number'))
-            if qid in m:
-                rs.append((q, m[qid]))
+            if qnum in m:
+                rs.append((q, m[qnum]))
     return rs
 
 
 def record_fault(answer):
-    from django.db.models import F
-    from django.db import transaction
-    from django.utils import six
     user = answer.user
     paper = answer.paper
-    qset = models.Fault.objects.all()
 
-    def update_or_create(question, qanswer):
-        question_id = question['id']
+    fs = extract_fault(answer)
+    nums = [a['number'] for a in answer.detail]
+    models.Fault.objects.filter(user=answer.user, paper=answer.paper).exclude(question_id__in=nums).update(
+        is_active=False)
+    for question, qanswer in fs:
+        question_id = question['number']
         lookup = dict(user=user, paper=paper, question_id=question_id)
-        params = dict(question=question, times=1, corrected=False, detail=dict(last_answer=qanswer))
-        params.update(lookup)
-        with transaction.atomic(using=qset.db):
-            try:
-                obj = qset.select_for_update().get(**lookup)
-            except qset.model.DoesNotExist:
-                obj, created = qset._create_object_from_params(lookup, params)
-                if created:
-                    return obj, created
-            params['times'] = F('times') + 1
-            for k, v in six.iteritems(params):
-                setattr(obj, k, v() if callable(v) else v)
-            obj.save(using=qset.db)
-        return obj, False
+        fault = models.Fault.objects.filter(**lookup).first()
+        if not fault:
+            models.Fault.objects.create(
+                question=question,
+                question_type=choices.MAP_QUESTION_TYPE.get(question['type']),
+                detail=dict(lastAnswer=qanswer), **lookup
+            )
+        else:
+            fault.times += 1
+            fault.detail['last_answer'] = qanswer
+            fault.corrected = False
+            fault.question = question
+            fault.is_active = True
+            fault.question_type = choices.MAP_QUESTION_TYPE.get(question['type'])
+            from datetime import datetime
+            fault.create_time = datetime.now()
+            rl = fault.detail.setdefault('result_list', [])
+            rl.append(False)
+            fault.save()
 
-    for question, qanswer in extract_fault(answer):
-        update_or_create(question, qanswer)
+
+def restruct_fault(paper):
+    import textdistance
+    jws = textdistance.JaroWinkler()
+
+    qtm = {}
+    gs = paper.content_object.get('groups')
+    nums = []
+    for g in gs:
+        for q in g.get('questions'):
+            q['group'] = dict(title=g.get('title'), memo=g.get('memo'), number=g.get('number'))
+            qtm[q.get('title')] = q
+            nums.append(q.get('number'))
+    models.Fault.objects.filter(paper=paper).exclude(question_id__in=nums).update(is_active=False)
+    bm = {True: [], False: []}
+    for f in paper.faults.all():
+        q = f.question
+        t1 = q.get('title')
+        tp1 = t1.split('题】')[-1]
+        qn = None
+        mdl = 0.8
+        for t2 in qtm.keys():
+            tp2 = t2.split('题】')[-1]
+            dl = jws.similarity(tp1, tp2)
+            if dl > mdl:
+                qn = qtm.get(t2)
+                mdl = dl
+        if not qn:
+            bm[False].append(f.id)
+            f.is_active = False
+            f.save()
+            continue
+        t2 = qn.get('title')
+        if t1 != t2 or q.get('options') != qn.get('options') or q.get('answer') != qn.get('answer'):
+            bm[True].append(f.id)
+            f.question = qn
+            f.save()
+    return bm
+
+
+def cal_correct_straight_times(rl):
+    c = 0
+    for i in range(len(rl) - 1, -1, -1):
+        if not rl[i]:
+            break
+        c += 1
+    return c
