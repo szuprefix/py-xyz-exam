@@ -36,9 +36,9 @@ def stats_answer(qset=None, measures=None, period=None):
         'all': lambda: qset.values("user_id").distinct().count(),
         'count': lambda: dstat.get_period_query_set(period).count(),
         'daily': lambda: dstat.stat(period, count_field='user_id', distinct=True),
-        'clazz': lambda: statutils.count_by(
+        'class': lambda: statutils.count_by(
             dstat.get_period_query_set(period),
-            'user__as_school_student__clazz__name',
+            'user__as_school_student__class__name',
             count_field='user_id',
             distinct=True, sort="-"),
         'course': lambda: statutils.count_by_generic_relation(
@@ -53,10 +53,10 @@ def stats_answer(qset=None, measures=None, period=None):
             distinct=True, sort="-"),
         'student': lambda: statutils.count_by(
             dstat.get_period_query_set(period),
-            "user__as_school_student__clazz__name,user__as_school_student__name"),
+            "user__as_school_student__class__name,user__as_school_student__name"),
         'student_course': lambda: statutils.count_with_generic_relation(
             dstat.get_period_query_set(period),
-            "user__as_school_student__clazz__name,user__as_school_student__name,paper__owner",
+            "user__as_school_student__class__name,user__as_school_student__name,paper__owner",
             trans_map={'course.chapter': ['course__name']}),
         'right': lambda: detail_group_stat(dstat.get_period_query_set(period), 'right'),
         'userAnswer': lambda: detail_group_stat(dstat.get_period_query_set(period), 'userAnswer'),
