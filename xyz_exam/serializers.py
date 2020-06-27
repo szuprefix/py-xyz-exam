@@ -23,7 +23,7 @@ class PaperListSerializer(PaperSerializer):
 class AnswerSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = models.Answer
-        fields = '__all__'
+        exclude = ()
         read_only_fields = ('user',)
 
 
@@ -35,6 +35,7 @@ class AnswerListSerializer(AnswerSerializer):
 class StatSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = models.Stat
+        exclude = ()
 
 
 class PerformanceSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
@@ -43,14 +44,14 @@ class PerformanceSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSeria
 
     class Meta:
         model = models.Performance
-        fields = '__all__'
+        exclude = ()
         read_only_fields = ['paper', 'user']
 
 
 class FaultSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = models.Fault
-        fields = '__all__'
+        exclude = ()
 
 
 class ExamSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
