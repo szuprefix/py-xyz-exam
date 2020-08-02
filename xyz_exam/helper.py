@@ -138,7 +138,8 @@ def restruct_fault(paper):
     jws = textdistance.JaroWinkler()
 
     qtm = {}
-    gs = paper.content_object.get('groups')
+    from copy import deepcopy
+    gs = deepcopy(paper.content_object.get('groups'))
     nums = []
     for g in gs:
         for q in g.get('questions'):
@@ -165,7 +166,7 @@ def restruct_fault(paper):
             f.save()
             continue
         t2 = qn.get('title')
-        if t1 != t2 or q.get('options') != qn.get('options') or q.get('answer') != qn.get('answer'):
+        if t1 != t2 or q.get('options') != qn.get('options') or q.get('answer') != qn.get('answer') or q.get('explanation') != qn.get('explanation'):
             bm[True].append(f.id)
             f.question = qn
             f.save()

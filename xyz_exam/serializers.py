@@ -57,4 +57,12 @@ class FaultSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer)
 class ExamSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = models.Exam
-        exclude = ()
+        exclude = ('target_users',)
+        read_only_fields = ('target_user_count',)
+
+
+class ExamListSerializer(ExamSerializer):
+    paper = None
+
+    class Meta(ExamSerializer.Meta):
+        exclude = ('target_users',)

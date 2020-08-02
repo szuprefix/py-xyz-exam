@@ -158,8 +158,16 @@ class Performance(models.Model):
             lastTime=lastAnswer and lastAnswer.create_time.isoformat()
         )
 
+    def get_user_info(self):
+        u = self.user
+        if hasattr(u, 'as_school_student'):
+            s = u.as_school_student
+            return {'number': s.number, 'group': unicode(s.classes.first())}
+        return {}
+
     def save(self, **kwargs):
         p = self.cal_performance()
+        p['userInfo'] = self.get_user_info()
         self.detail = p
         self.score = p.get('maxScore', 0)
         return super(Performance, self).save(**kwargs)
@@ -198,12 +206,19 @@ class Fault(models.Model):
 class Exam(models.Model):
     class Meta:
         verbose_name_plural = verbose_name = "考试"
+        ordering = ('-is_active', '-begin_time')
 
     name = models.CharField('名称', max_length=256)
     begin_time = models.DateTimeField('开始时间', db_index=True)
     end_time = models.DateTimeField('结束时间', db_index=True, null=True, blank=True)
     minutes = models.PositiveSmallIntegerField('限时(分钟)', default=60)
     is_active = models.BooleanField("有效", blank=False, default=False)
+    target_user_tags = models.TextField('目标人群标签', null=True, blank=True,
+                                        help_text="符合标签的人才能填写问卷,留空则所有人均可填写但不会发个人通知.<p>"
+                                                  "例子:<p>老师:张三,李四,赵五<p>学生:*<p>学生.年级:大一,大二<p>学生.入学届别:2019届<p>学生.班级:2018级数字媒体201801班,2018级数字媒体201804班")
+    target_user_count = models.PositiveIntegerField('目标参与人数', default=0, blank=True)
+    actual_user_count = models.PositiveIntegerField('实际参与人数', default=0, blank=True, null=True)
+    target_users = models.ManyToManyField(User, verbose_name='参与人', related_name='exams')
     create_time = models.DateTimeField("创建时间", auto_now_add=True)
     update_time = models.DateTimeField("更新时间", auto_now=True)
     owner_type = models.ForeignKey('contenttypes.ContentType', verbose_name='归类', null=True, blank=True,
@@ -215,8 +230,34 @@ class Exam(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_target_user_ids(self):
+        from django_szuprefix.auth.helper import find_user_ids_by_tag
+        tags = self.target_user_tags
+        if tags:
+            return set(find_user_ids_by_tag(tags))
+        return set()
+
+    def get_actual_user_ids(self):
+        return self.paper and set(self.paper.answers.values_list("user_id", flat=True)) or set()
+
+    @cached_property
+    def paper(self):
+        from django.contrib.contenttypes.models import ContentType
+        return Paper.objects.filter(owner_type=ContentType.objects.get_for_model(Exam), owner_id=self.id).first()
+
+    def get_not_answer_user_ids(self):
+        return self.get_target_user_ids().difference(self.get_actual_user_ids())
+
     def save(self, **kwargs):
+        if not self.minutes:
+            self.minutes = 60
         if self.end_time is None:
             from datetime import timedelta
             self.end_time = self.begin_time + timedelta(minutes=self.minutes)
-        return super(Exam, self).save(**kwargs)
+        uids = self.get_target_user_ids()
+        self.target_user_count = len(uids)
+        if self.actual_user_count is None:
+            self.actual_user_count = 0
+        super(Exam, self).save(**kwargs)
+        self.target_users = User.objects.filter(id__in=uids)
+        self.actual_user_count = len(self.get_actual_user_ids())
