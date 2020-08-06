@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save
-from django_szuprefix.common.signals import to_save_version
+from xyz_common.signals import to_save_version
 from datetime import datetime
 from . import models, helper
 
@@ -76,7 +76,7 @@ def restruct_fault_when_paper_changed(sender, **kwargs):
         paper = kwargs['instance']
         from django.contrib.contenttypes.models import ContentType
         ct = ContentType.objects.get_for_model(models.Paper)
-        from django_szuprefix.common.models import VersionHistory
+        from xyz_common.models import VersionHistory
         from datetime import date
         changed = VersionHistory.objects.filter(content_type=ct, object_id=paper.id,
                                                 create_time__gte=date.today()).exists()

@@ -231,7 +231,7 @@ class Exam(models.Model):
         return self.name
 
     def get_target_user_ids(self):
-        from django_szuprefix.auth.helper import find_user_ids_by_tag
+        from xyz_auth.helper import find_user_ids_by_tag
         tags = self.target_user_tags
         if tags:
             return set(find_user_ids_by_tag(tags))
