@@ -4,7 +4,7 @@ from __future__ import division, unicode_literals
 __author__ = 'denishuang'
 import re
 from xyz_util.datautils import strQ2B
-from . import models
+from . import models, choices
 
 
 def distrib_count(d, a):
