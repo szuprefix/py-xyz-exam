@@ -138,3 +138,10 @@ class ExamViewSet(BatchActionMixin, viewsets.ModelViewSet):
     @decorators.list_route(['POST'])
     def batch_active(self, request):
         return self.do_batch_action('is_active', True)
+
+
+    @decorators.detail_route(['GET', 'POST'])
+    def user_answer_signature(self, request, pk):
+        from xyz_qcloud.cos import gen_signature
+        sign = gen_signature(allow_prefix='/exam/exam/%s/answer/%s/*' % (pk, request.user.id))
+        return response.Response(sign)

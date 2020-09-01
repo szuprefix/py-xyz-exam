@@ -85,6 +85,7 @@ class Answer(models.Model):
     paper = models.ForeignKey(Paper, verbose_name=Paper._meta.verbose_name, related_name="answers",
                               on_delete=models.PROTECT)
     detail = modelutils.JSONField("详情", help_text="")
+    pictures = modelutils.JSONField("图片", blank=True, default={})
     seconds = models.PositiveSmallIntegerField("用时", default=0, blank=True, null=True, help_text="单位(秒)")
     std_score = models.PositiveSmallIntegerField("分数", default=0, blank=True, null=True)
     performance = modelutils.JSONField("成绩表现", blank=True, null=True, help_text="")
