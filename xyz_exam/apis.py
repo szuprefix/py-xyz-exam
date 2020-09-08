@@ -139,9 +139,22 @@ class ExamViewSet(BatchActionMixin, viewsets.ModelViewSet):
     def batch_active(self, request):
         return self.do_batch_action('is_active', True)
 
-
     @decorators.detail_route(['GET', 'POST'])
     def user_answer_signature(self, request, pk):
         from xyz_qcloud.cos import gen_signature
         sign = gen_signature(allow_prefix='/exam/exam/%s/answer/%s/*' % (pk, request.user.id))
         return response.Response(sign)
+
+    @decorators.detail_route(['GET'])
+    def all_answers(self, request, pk):
+        exam = self.get_object()
+        paper = exam.paper
+        answers = paper.answers
+        uids = list(answers.values_list('user_id', flat=True))
+        from xyz_school.models import Student
+        students = Student.objects.filter(user_id__in=uids).values('number', 'name', 'id', 'user')
+        return response.Response(dict(
+            students=students,
+            answers=serializers.AnswerSerializer(answers, many=True).data,
+            paper=serializers.PaperSerializer(paper).data
+        ))

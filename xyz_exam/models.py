@@ -99,18 +99,37 @@ class Answer(models.Model):
         self.std_score = self.performance.get('stdScore')
         return super(Answer, self).save(**kwargs)
 
+    def get_question_subjective_map(self):
+        p = self.paper.content_object
+        m = {}
+        for g in p['groups']:
+            is_subjective = g.get('type') in ['textarea', 'sentence']
+            for q in g['questions']:
+                m[q['number']] = is_subjective
+        return m
+
     def cal_performance(self):
         wc = 0
         rc = 0
         score = 0
+        score_subjective = 0
+        score_objective = 0
         fsc = 0
+
+        sm = self.get_question_subjective_map()
 
         for a in self.detail:
             if a['right'] is True:
                 rc += 1
             else:
                 wc += 1
-            score += a['userScore']
+            is_subjective = sm[a['number']]
+            sc = a['userScore']
+            if is_subjective:
+                score_subjective += sc
+            else:
+                score_objective += sc
+            score += sc
             fsc += a['score']
         stdScore = score * 100 / fsc if fsc > 0 else 0
         return dict(
@@ -119,6 +138,8 @@ class Answer(models.Model):
             fullScore=fsc,
             score=score,
             stdScore=stdScore,
+            scoreSubjective = score_subjective,
+            scoreObjective = score_objective,
             isPassed=stdScore >= EXAM_MIN_PASS_SCORE
         )
 
@@ -248,6 +269,24 @@ class Exam(models.Model):
 
     def get_not_answer_user_ids(self):
         return self.get_target_user_ids().difference(self.get_actual_user_ids())
+
+    @cached_property
+    def answers(self):
+        return self.paper.answers.all()
+
+    def performance(self):
+        rs = []
+        for a in self.answers:
+            d = {}
+            d.update(a.performance)
+            user = a.user
+            if hasattr(user, 'as_school_student'):
+                student = user.as_school_student
+                d['group'] = unicode(student.classes.first())
+                d['number'] = student.number
+                d['name'] = student.name
+            rs.append(d)
+        return rs
 
     def save(self, **kwargs):
         if not self.minutes:
