@@ -85,6 +85,7 @@ class Answer(models.Model):
     paper = models.ForeignKey(Paper, verbose_name=Paper._meta.verbose_name, related_name="answers",
                               on_delete=models.PROTECT)
     detail = modelutils.JSONField("详情", help_text="")
+    grade_detail = modelutils.JSONField("批卷", help_text="")
     pictures = modelutils.JSONField("图片", blank=True, default={})
     seconds = models.PositiveSmallIntegerField("用时", default=0, blank=True, null=True, help_text="单位(秒)")
     std_score = models.PositiveSmallIntegerField("分数", default=0, blank=True, null=True)
@@ -103,7 +104,11 @@ class Answer(models.Model):
         p = self.paper.content_object
         m = {}
         for g in p['groups']:
-            is_subjective = g.get('type') in ['textarea', 'sentence']
+            is_subjective = False
+            for q in g['questions']:
+                if q.get('type') in ['textarea', 'sentence']:
+                    is_subjective = True
+                    break
             for q in g['questions']:
                 m[q['number']] = is_subjective
         return m
@@ -123,7 +128,7 @@ class Answer(models.Model):
                 rc += 1
             else:
                 wc += 1
-            is_subjective = sm[a['number']]
+            is_subjective = sm.get(a['number'])
             sc = a['userScore']
             if is_subjective:
                 score_subjective += sc

@@ -180,3 +180,18 @@ def cal_correct_straight_times(rl):
             break
         c += 1
     return c
+
+def check_token(request, pk):
+    from django.core.signing import TimestampSigner
+    import json, base64
+    from datetime import datetime
+    signer = TimestampSigner(salt=str(pk))
+    qs = request.query_params
+    token = qs.get('token')
+    try:
+        s = base64.b64decode(signer.unsign(token))
+        d = json.loads(s)
+        if d['exam'] != pk or d['expire'] <= datetime.now().isoformat():
+            return {'detail': '验证码无效'}
+    except:
+        return {'detail': '验证码无效'}

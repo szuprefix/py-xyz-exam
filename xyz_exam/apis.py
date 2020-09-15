@@ -2,8 +2,8 @@
 from __future__ import division
 from xyz_util.statutils import do_rest_stat_action, using_stats_db
 from xyz_restful.mixins import UserApiMixin, BatchActionMixin
-from . import models, serializers, stats
-from rest_framework import viewsets, decorators, response
+from . import models, serializers, stats,helper
+from rest_framework import viewsets, decorators, response, status
 from xyz_restful.decorators import register
 
 
@@ -63,6 +63,16 @@ class AnswerViewSet(UserApiMixin, viewsets.ModelViewSet):
     @decorators.list_route(['get'])
     def stat(self, request):
         return do_rest_stat_action(self, stats.stats_answer)
+
+
+    @decorators.detail_route(['PATCH'], permission_classes=[], filter_backends=[])
+    def grade(self, request, pk):
+        qs = request.query_params
+        exam_id = qs.get('exam')
+        error = helper.check_token(request, exam_id)
+        if error:
+            return response.Response(error, status=status.HTTP_403_FORBIDDEN)
+        return self.partial_update(request)
 
 
 @register()
@@ -145,8 +155,12 @@ class ExamViewSet(BatchActionMixin, viewsets.ModelViewSet):
         sign = gen_signature(allow_prefix='/exam/exam/%s/answer/%s/*' % (pk, request.user.id))
         return response.Response(sign)
 
-    @decorators.detail_route(['GET'])
+
+    @decorators.detail_route(['GET'], permission_classes=[], filter_backends=[])
     def all_answers(self, request, pk):
+        error = helper.check_token(request, pk)
+        if error:
+            return response.Response(error, status=status.HTTP_403_FORBIDDEN)
         exam = self.get_object()
         paper = exam.paper
         answers = paper.answers
@@ -156,5 +170,25 @@ class ExamViewSet(BatchActionMixin, viewsets.ModelViewSet):
         return response.Response(dict(
             students=students,
             answers=serializers.AnswerSerializer(answers, many=True).data,
-            paper=serializers.PaperSerializer(paper).data
+            paper=serializers.PaperSerializer(paper).data,
+            exam=serializers.ExamSerializer(exam).data
         ))
+
+    @decorators.detail_route(['GET'])
+    def get_grade_token(self, request, pk):
+        from django.core.signing import TimestampSigner
+        signer = TimestampSigner(salt=str(pk))
+        from datetime import datetime, timedelta
+        import json, base64
+        expire_time = datetime.now() + timedelta(days=7)
+        d = dict(exam=pk, expire=expire_time.isoformat())
+        token = signer.sign(base64.b64encode(json.dumps(d)))
+        return response.Response(dict(token=token))
+
+    # @decorators.detail_route(['POST', 'GET'], permission_classes=[], filter_backends=[])
+    # def collect_answer(self, request, pk):
+    #     error = self.check_token(request, pk)
+    #     if error:
+    #         return response.Response(error, status=status.HTTP_403_FORBIDDEN)
+    #     serializers.AnswerSerializer()
+    #     return response.Response(dict(detail='ok'))
