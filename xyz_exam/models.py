@@ -85,7 +85,7 @@ class Answer(models.Model):
     paper = models.ForeignKey(Paper, verbose_name=Paper._meta.verbose_name, related_name="answers",
                               on_delete=models.PROTECT)
     detail = modelutils.JSONField("详情", help_text="")
-    grade_detail = modelutils.JSONField("批卷", help_text="")
+    grade_detail = modelutils.JSONField("批卷", blank=True, help_text="")
     pictures = modelutils.JSONField("图片", blank=True, default={})
     seconds = models.PositiveSmallIntegerField("用时", default=0, blank=True, null=True, help_text="单位(秒)")
     std_score = models.PositiveSmallIntegerField("分数", default=0, blank=True, null=True)
@@ -96,6 +96,8 @@ class Answer(models.Model):
         return "%s by %s" % (self.paper, self.user.get_full_name())
 
     def save(self, **kwargs):
+        if self.grade_detail is None:
+            self.grade_detail = {}
         self.performance = self.cal_performance()
         self.std_score = self.performance.get('stdScore')
         return super(Answer, self).save(**kwargs)
