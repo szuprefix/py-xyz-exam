@@ -96,7 +96,7 @@ class Answer(models.Model):
         return "%s by %s" % (self.paper, self.user.get_full_name())
 
     def save(self, **kwargs):
-        if self.grade_detail is None:
+        if not self.grade_detail:
             self.grade_detail = {}
         self.performance = self.cal_performance()
         self.std_score = self.performance.get('stdScore')
