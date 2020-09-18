@@ -7,9 +7,9 @@ from django.utils.functional import cached_property
 from django.contrib.auth.models import User
 from xyz_util import modelutils
 from . import choices
+from copy import deepcopy
 
 EXAM_MIN_PASS_SCORE = 70
-
 
 
 class Paper(models.Model):
@@ -139,16 +139,51 @@ class Answer(models.Model):
             score += sc
             fsc += a['score']
         stdScore = score * 100 / fsc if fsc > 0 else 0
+
+        ms = self.cal_merge_score()
+        format = lambda a: int(round(a))  # float('%.1f' % a)
         return dict(
             wrongCount=wc,
             rightCount=rc,
             fullScore=fsc,
-            score=score,
-            stdScore=stdScore,
-            scoreSubjective = score_subjective,
-            scoreObjective = score_objective,
-            isPassed=stdScore >= EXAM_MIN_PASS_SCORE
+            score=format(score),
+            stdScore=format(stdScore),
+            scoreSubjective=format(score_subjective),
+            scoreObjective=format(score_objective),
+            isPassed=stdScore >= EXAM_MIN_PASS_SCORE,
+            scoreMerge=format(ms),
+            stdScoreMerge=format(ms * 100 / fsc if fsc > 0 else 0)
         )
+
+    def cal_group_score(self):
+        p = self.paper.content_object
+        m = {}
+        d = self.detail
+        if not d:
+            return m
+        ld = len(d)
+        for g in p['groups']:
+            gs = 0
+            for q in g['questions']:
+                n = q['number']
+                if n>ld:
+                    continue
+                gs += d[n-1]['userScore']
+            m[g['id']] = gs
+        return m
+
+    def merge_group_score(self):
+        m = self.cal_group_score()
+        gm = deepcopy(self.grade_detail)
+        for k, v in m.iteritems():
+            if k in gm:
+                continue
+            gm[k] = dict(score=m[k])
+        return gm
+
+    def cal_merge_score(self):
+        gm = self.merge_group_score()
+        return sum([v['score'] for k, v in gm.items()])
 
 
 class Performance(models.Model):
@@ -212,7 +247,8 @@ class Fault(models.Model):
     paper = models.ForeignKey(Paper, verbose_name=Paper._meta.verbose_name, related_name="faults",
                               on_delete=models.PROTECT)
     question_id = models.CharField("题号", max_length=16)
-    question_type = models.PositiveSmallIntegerField("类别", choices=choices.CHOICES_QUESTION_TYPE, default=choices.QUESTION_TYPE_TEXTAREA, db_index=True)
+    question_type = models.PositiveSmallIntegerField("类别", choices=choices.CHOICES_QUESTION_TYPE,
+                                                     default=choices.QUESTION_TYPE_TEXTAREA, db_index=True)
     question = modelutils.JSONField("题目")
     times = models.PositiveSmallIntegerField("次数", default=1)
     detail = modelutils.JSONField("详情")
@@ -229,7 +265,6 @@ class Fault(models.Model):
         from . import helper
         self.correct_straight_times = helper.cal_correct_straight_times(self.detail.get('result_list', []))
         return super(Fault, self).save(**kwargs)
-
 
 
 class Exam(models.Model):
@@ -254,7 +289,6 @@ class Exam(models.Model):
                                    on_delete=models.PROTECT)
     owner_id = models.PositiveIntegerField(verbose_name='属主编号', null=True, blank=True, db_index=True)
     owner = GenericForeignKey('owner_type', 'owner_id')
-
 
     def __unicode__(self):
         return self.name
@@ -294,6 +328,12 @@ class Exam(models.Model):
                 d['name'] = student.name
             rs.append(d)
         return rs
+
+    def cal_answers_score(self):
+        for a in self.paper.answers.all():
+            print a.id
+            a.save()
+            print a.performance
 
     def save(self, **kwargs):
         if not self.minutes:
