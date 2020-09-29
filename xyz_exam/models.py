@@ -285,6 +285,7 @@ class Exam(models.Model):
     target_users = models.ManyToManyField(User, verbose_name='参与人', related_name='exams')
     create_time = models.DateTimeField("创建时间", auto_now_add=True)
     update_time = models.DateTimeField("更新时间", auto_now=True)
+    manual_grade = models.BooleanField("人工评分", blank=True, default=False)
     owner_type = models.ForeignKey('contenttypes.ContentType', verbose_name='归类', null=True, blank=True,
                                    on_delete=models.PROTECT)
     owner_id = models.PositiveIntegerField(verbose_name='属主编号', null=True, blank=True, db_index=True)

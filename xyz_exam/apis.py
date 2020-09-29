@@ -142,7 +142,8 @@ class ExamViewSet(BatchActionMixin, viewsets.ModelViewSet):
         'is_active': ['exact', 'in'],
         'owner_type': ['exact'],
         'owner_id': ['exact', 'in'],
-        'begin_time': ['gte', 'lte']
+        'begin_time': ['gte', 'lte'],
+        'manual_grade': ['exact']
     }
 
     @decorators.list_route(['POST'])
