@@ -5,10 +5,10 @@ from xyz_restful.mixins import UserApiMixin, BatchActionMixin
 from . import models, serializers, stats,helper
 from rest_framework import viewsets, decorators, response, status
 from xyz_restful.decorators import register
-
+from xyz_dailylog.mixins import ViewsMixin
 
 @register()
-class PaperViewSet(UserApiMixin, BatchActionMixin, viewsets.ModelViewSet):
+class PaperViewSet(ViewsMixin, UserApiMixin, BatchActionMixin, viewsets.ModelViewSet):
     queryset = models.Paper.objects.all()
     serializer_class = serializers.PaperSerializer
     search_fields = ('title',)
