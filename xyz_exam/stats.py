@@ -16,7 +16,7 @@ def sort_by(a):
     if a['stat']['right']:
         return a['stat']['right'].get(True, 0) / (1 + a['stat']['right'].get(False))
 
-def stats_paper(qset=None, measures=None, period=None):
+def stats_paper(qset=None, measures=None, period=None, time_field=None):
     qset = qset if qset is not None else models.Paper.objects.all()
     qset = statutils.using_stats_db(qset)
     dstat = statutils.DateStat(qset, 'create_time')
@@ -26,7 +26,7 @@ def stats_paper(qset=None, measures=None, period=None):
     }
     return dict([(m, funcs[m]()) for m in measures])
 
-def stats_answer(qset=None, measures=None, period=None):
+def stats_answer(qset=None, measures=None, period=None, time_field=None):
     qset = qset if qset is not None else models.Answer.objects.all()
     qset = statutils.using_stats_db(qset)
     dstat = statutils.DateStat(qset, 'create_time')
@@ -64,7 +64,7 @@ def stats_answer(qset=None, measures=None, period=None):
     return dict([(m, funcs[m]()) for m in measures])
 
 
-def stats_fault(qset=None, measures=None, period=None):
+def stats_fault(qset=None, measures=None, period=None, time_field=None):
     qset = qset if qset is not None else models.Fault.objects.all()
     qset = statutils.using_stats_db(qset)
     dstat = statutils.DateStat(qset, 'update_time')

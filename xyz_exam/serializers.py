@@ -39,13 +39,13 @@ class StatSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
 
 
 class PerformanceSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):
-    paper_name = serializers.CharField(source="paper", label='试卷', read_only=True)
+    paper_name = serializers.CharField(source="paper.title", label='试卷', read_only=True)
     user_name = serializers.CharField(source="user.get_full_name", label='学生', read_only=True)
 
     class Meta:
         model = models.Performance
         exclude = ()
-        read_only_fields = ['paper', 'user']
+        read_only_fields = ['user']
 
 
 class FaultSerializer(IDAndStrFieldSerializerMixin, serializers.ModelSerializer):

@@ -24,7 +24,7 @@ class Paper(models.Model):
                                help_text="编辑指南:\n首行为标题.\n题型用中文数字加点号开头.\n题目用阿拉伯数字加点号开头.\n答案选项用英文字母加点号开头.\n正确答案用'答案:'开头")
     content_object = modelutils.JSONField("内容对象", blank=True, null=True, help_text="")
     create_time = models.DateTimeField("创建时间", auto_now_add=True)
-    is_active = models.BooleanField("有效", blank=False, default=False)
+    is_active = models.BooleanField("有效", blank=False, default=True)
     questions_count = models.PositiveSmallIntegerField("题数", blank=True, default=0)
     is_break_through = models.BooleanField("闯关", blank=True, default=True)
     tags = models.CharField('标签', max_length=256, blank=True, default='')
