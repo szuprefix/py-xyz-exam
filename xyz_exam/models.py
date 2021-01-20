@@ -65,8 +65,8 @@ class Stat(models.Model):
         questions = d.setdefault('questions', {})
         score_level = str(answer.performance.get('stdScore', 0) / 5 * 5)
         helper.distrib_count(d.setdefault('scores', {}), score_level)
-        seconds_level = str((answer.seconds / 60 + 1) * 60)
-        helper.distrib_count(d.setdefault('seconds', {}), seconds_level)
+        seconds_level = str((answer.seconds / 30 + 1) * 30)
+        helper.distrib_count(d.setdefault('seconds', {}), seconds_level, reverse=True)
         ad = answer.detail
         for a in ad:
             num = str(a.get('number'))

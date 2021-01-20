@@ -7,14 +7,14 @@ from xyz_util.datautils import strQ2B
 from . import models, choices
 
 
-def distrib_count(d, a):
+def distrib_count(d, a, reverse=False):
     a = str(a)
     counts = d.setdefault('counts', {})
     percents = d.setdefault('percents', {})
     counts[a] = counts.setdefault(a, 0) + 1
     tc = sum(counts.values())
     cas = [(int(float(k)), v) for k, v in counts.iteritems()]
-    cas.sort()
+    cas.sort(reverse=reverse)
     s = 0
     for k, v in cas:
         s += v
